@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.optimize import linear_sum_assignment as linear_assignment 
 
 def cluster_acc(y_true, y_pred):
@@ -18,6 +19,4 @@ def cluster_acc(y_true, y_pred):
     for i in range(y_pred.size):
         w[y_pred[i], y_true[i]] += 1
     ind = linear_assignment(w.max() - w) # assignment problem
-    # print([w[i, j] for i, j in list(map(list, zip(*ind))) if w[i, j]!=0])
-    # print(y_pred.size)
     return sum([w[i, j] for i, j in list(map(list, zip(*ind)))]) * 1.0 / y_pred.size

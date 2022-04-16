@@ -1,9 +1,19 @@
 import numpy as np
 
+def cosine_distance(x1, x2):
+    distance_arr = (x1 @ x2.T) / (np.linalg.norm(x1, axis=1, keepdims=True) @ np.linalg.norm(x2, axis=1, keepdims=True).T)
+    distance_arr = 1 - distance_arr + 1e-8
+    return distance_arr
+
+def euclidean_distance(x1, x2):
+    distance_arr = ((x1[:,np.newaxis,:] - x2)**2).sum(2)**0.5
+    return distance_arr
+
 class KMeansBase:
-    def __init__(self, data, k):
+    def __init__(self, data, k, metric):
         self.data = data
         self.k = k
+        self.metric = metric
         np.random.seed(0)
 
     def cluster(self):
@@ -11,16 +21,12 @@ class KMeansBase:
 
     def _initial_centroids(self):
         # get the initial set of centroids
-        # get k random numbers between 0 and the number of rows in the data set
         centroid_indexes = np.random.choice(range(self.data.shape[0]), self.k, replace=False)
         # get the corresponding data points
         return self.data[centroid_indexes, :]
 
     def _lloyds_iterations(self):
-        #warnings.simplefilter("error")
         centroids = self._initial_centroids()
-        #print('Initial Centroids:', centroids)
-
         stabilized = False
 
         j_values = []
@@ -28,21 +34,14 @@ class KMeansBase:
         while (not stabilized) and (iterations < 1000):
             print ('iteration counter: ', iterations)
             try:
-                # find the Euclidean distance between a center and a data point
-                # centroids array shape = k x m
                 # data array shape = n x m
-                # In order to broadcast it, we have to introduce a third dimension into data
-                # data array becomes n x 1 x m
-                # now as a result of broadcasting, both array sizes will be n x k x m
-                distance_arr = (self.data @ centroids.T) / (np.linalg.norm(self.data, axis=1, keepdims=True) @ np.linalg.norm(centroids, axis=1, keepdims=True).T)
-                distance_arr = 1 - distance_arr + 1e-8
-                # now take the summation of all distances along the 3rd axis(length of the dimension is m).
-                # This will be the total distance from each centroid for each data point.
-                # resulting vector will be of size n x k
+                # centroids array shape = k x m
+                if self.metric == 'cosine':
+                    distance_arr = cosine_distance(self.data, centroids)
+                elif self.metric == 'euclidean':
+                    distance_arr = euclidean_distance(self.data, centroids)
 
-                # now we need to find out to which cluster each data point belongs.
-                # Use a matrix of n x k where [i,j] = 1 if the ith data point belongs
-                # to cluster j.
+                # Use a matrix of n x k where [i,j] = 1 if the ith data point belongs to cluster j.
                 min_location = np.zeros(distance_arr.shape)
                 min_location[range(distance_arr.shape[0]), np.argmin(distance_arr, axis=1)] = 1
 
@@ -85,8 +84,8 @@ class KMeansBase:
                 return False
 
 class KMeansPP(KMeansBase):
-    def __init__(self, data, k):
-        KMeansBase.__init__(self, data, k)
+    def __init__(self, data, k, metric):
+        KMeansBase.__init__(self, data, k, metric)
 
     def _initial_centroids(self):
         # pick the initial centroid randomly
@@ -94,15 +93,17 @@ class KMeansPP(KMeansBase):
 
         # run k - 1 passes through the data set to select the initial centroids
         while centroids.shape[0] < self.k :
-            #print (centroids)
-            distance_arr = (self.data @ centroids.T) / (np.linalg.norm(self.data, axis=1, keepdims=True) @ np.linalg.norm(centroids, axis=1, keepdims=True).T)
-            distance_arr = 1 - distance_arr + 1e-8
+            if self.metric == 'cosine':
+                distance_arr = cosine_distance(self.data, centroids)
+            elif self.metric == 'euclidean':
+                distance_arr = euclidean_distance(self.data, centroids)
+
             min_location = np.zeros(distance_arr.shape)
             min_location[range(distance_arr.shape[0]), np.argmin(distance_arr, axis=1)] = 1
             # calculate J
             j_val = np.sum(distance_arr[min_location == True])
             # calculate the probability distribution
             prob_dist = np.min(distance_arr, axis=1)/j_val
-            # select the next centroid using the probability distribution calculated before
+            # select the next centroid using the probability distribution
             centroids = np.vstack([centroids, self.data[np.random.choice(range(self.data.shape[0]),1, p = prob_dist), :]])
         return centroids
