@@ -10,11 +10,11 @@ def euclidean_distance(x1, x2):
     return distance_arr
 
 class KMeansBase:
-    def __init__(self, data, k, metric):
+    def __init__(self, data, k, metric, seed):
         self.data = data
         self.k = k
         self.metric = metric
-        np.random.seed(0)
+        np.random.seed(seed)
 
     def cluster(self):
         return self._lloyds_iterations()
@@ -84,8 +84,8 @@ class KMeansBase:
                 return False
 
 class KMeansPP(KMeansBase):
-    def __init__(self, data, k, metric):
-        KMeansBase.__init__(self, data, k, metric)
+    def __init__(self, data, k, metric, seed):
+        KMeansBase.__init__(self, data, k, metric, seed)
 
     def _initial_centroids(self):
         # pick the initial centroid randomly
